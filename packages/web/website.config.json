@@ -1,0 +1,8 @@
+{
+    "id": "website",
+    "name": "Client Project Dashboard",
+    "description": "Track client deliverables, open items, and compliance deadlines.",
+    "url": "https://example.com",
+    "hostname": "xyz.runable.site",
+    "port": 4200
+}

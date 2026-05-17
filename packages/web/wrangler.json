@@ -1,0 +1,32 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sandbox-website-template",
+  "compatibility_date": "2025-10-08",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "main": "./src/api/index.ts",
+  "assets": {
+    "directory": "./dist/client",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/api/*"
+    ]
+  },
+  "triggers": {
+    "crons": [
+      "0 16 * * *"
+    ]
+  },
+  "vars": {
+    "AI_GATEWAY_BASE_URL": "",
+    "AI_GATEWAY_API_KEY": "",
+    "RUNABLE_URL": "",
+    "BETTER_AUTH_SECRET": "",
+    "RESEND_API_KEY": "",
+    "DATABASE_URL": "",
+    "DATABASE_AUTH_TOKEN": "",
+    "AUTUMN_SECRET_KEY": "",
+    "OPCO_NAME": "USI"
+  }
+}
