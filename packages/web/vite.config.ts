@@ -7,10 +7,11 @@ import runableWebsiteRuntime from "runable-website-runtime"
 import runableAnalyticsPlugin from "./vite/plugins/runable-analytics-plugin";
 import honoDevPlugin from "./vite/plugins/hono-dev-plugin";
 import cleanOrphanedChunksPlugin from "./vite/plugins/clean-orphaned-chunks";
+import workerInlinePlugin from "./vite/plugins/worker-inline-plugin";
 
 
 export default defineConfig({
-	plugins: [react(), runableAnalyticsPlugin(), runableWebsiteRuntime(), cloudflare(), tailwind(), honoDevPlugin(), cleanOrphanedChunksPlugin()],
+	plugins: [react(), runableAnalyticsPlugin(), runableWebsiteRuntime(), cloudflare(), tailwind(), honoDevPlugin(), cleanOrphanedChunksPlugin(), workerInlinePlugin()],
 	resolve: {
 		alias: {
 			"@": path.resolve(__dirname, "./src/web"),

@@ -64,7 +64,7 @@
     "wrangler": "^4.92.0"
   },
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && node scripts/postbuild.mjs",
     "dev": "vite",
     "lint": "eslint .",
     "preview": "bun run build && vite preview",
