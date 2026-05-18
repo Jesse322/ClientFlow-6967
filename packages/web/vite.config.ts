@@ -49,8 +49,34 @@ function clientManualChunksPlugin(): Plugin {
 	};
 }
 
+/**
+ * runable-website-runtime injects `import('runable-badge-prod')` into any file
+ * matching index.ts/index.js — including the worker entry (src/index.ts).
+ * CF Workers don't support dynamic local chunk imports, so we must prevent
+ * the badge injection from running on non-client files.
+ *
+ * This wrapper patches the plugin array returned by runableWebsiteRuntime()
+ * so that the `transform` hook in `website-editor-badge` only fires for
+ * files under src/web (the client entry), not src/index.ts (the worker entry).
+ */
+function patchRunableWebsiteRuntime(): Plugin[] {
+	const plugins = (runableWebsiteRuntime() as unknown as Plugin[]);
+	return plugins.map((p) => {
+		if (p.name !== "website-editor-badge") return p;
+		const originalTransform = p.transform as ((code: string, id: string) => unknown) | undefined;
+		return {
+			...p,
+			transform(code: string, id: string) {
+				// Only inject badge into client-side files (src/web), never the worker entry
+				if (!id.includes("/src/web/")) return null;
+				return originalTransform?.call(this, code, id) ?? null;
+			},
+		};
+	});
+}
+
 export default defineConfig({
-	plugins: [react(), runableAnalyticsPlugin(), runableWebsiteRuntime(), cloudflare(), tailwind(), honoDevPlugin(), clientManualChunksPlugin(), cleanOrphanedChunksPlugin()],
+	plugins: [react(), runableAnalyticsPlugin(), ...patchRunableWebsiteRuntime(), cloudflare(), tailwind(), honoDevPlugin(), clientManualChunksPlugin(), cleanOrphanedChunksPlugin()],
 	resolve: {
 		alias: {
 			"@": path.resolve(__dirname, "./src/web"),
