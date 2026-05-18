@@ -168,3 +168,45 @@ try {
   rmSync(deployConfig);
   console.log("✓ Removed .wrangler/deploy/config.json");
 } catch (_) { /* may not exist */ }
+
+// ─── 5. Sync dist/client/ → public/ ─────────────────────────────────────────
+// Runable publishes from public/, not dist/. After each build we replace stale
+// public/assets/ JS+CSS with fresh dist/client/assets/ and update public/index.html.
+// Non-asset files (favicon, logos, sounds/, runable.js, etc.) are left untouched.
+
+const publicDir = path.join(webRoot, "public");
+const publicAssetsDir = path.join(publicDir, "assets");
+const distClientAssetsDir = path.join(clientDir, "assets"); // clientDir = dist/client
+const distClientIndex = path.join(clientDir, "index.html");
+const publicIndex = path.join(publicDir, "index.html");
+
+// Delete stale .js and .css in public/assets/
+if (await exists(publicAssetsDir)) {
+  const staleFiles = await fs.readdir(publicAssetsDir);
+  let deletedCount = 0;
+  for (const f of staleFiles) {
+    const ext = path.extname(f);
+    if (ext === ".js" || ext === ".css") {
+      await fs.unlink(path.join(publicAssetsDir, f));
+      deletedCount++;
+    }
+  }
+  if (deletedCount > 0) console.log(`✓ Removed ${deletedCount} stale files from public/assets/`);
+} else {
+  await fs.mkdir(publicAssetsDir, { recursive: true });
+}
+
+// Copy fresh assets from dist/client/assets/ → public/assets/
+if (await exists(distClientAssetsDir)) {
+  const freshFiles = await fs.readdir(distClientAssetsDir);
+  for (const f of freshFiles) {
+    await fs.copyFile(path.join(distClientAssetsDir, f), path.join(publicAssetsDir, f));
+  }
+  console.log(`✓ Copied ${freshFiles.length} fresh assets from dist/client/assets/ → public/assets/`);
+}
+
+// Copy dist/client/index.html → public/index.html
+if (await exists(distClientIndex)) {
+  await fs.copyFile(distClientIndex, publicIndex);
+  console.log("✓ Copied dist/client/index.html → public/index.html");
+}
