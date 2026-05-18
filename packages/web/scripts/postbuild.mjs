@@ -110,7 +110,55 @@ try {
   console.warn("⚠ Could not patch wrangler.json:", e.message);
 }
 
-// ─── 3. Remove .wrangler/deploy/config.json ──────────────────────────────────
+// ─── 3. Rewrite bare Node builtins to node: prefix in worker chunks ──────────
+// CF Workers with nodejs_compat supports both "node:x" and bare "x" specifiers,
+// BUT only when wrangler bundles the code itself. When the platform deploys
+// pre-built chunks directly, bare specifiers reach V8 unresolved → "Load failed".
+// Rewriting them to "node:" prefix ensures they resolve regardless of bundling.
+
+const NODE_BUILTINS = new Set([
+  "assert", "async_hooks", "buffer", "child_process", "cluster", "console",
+  "constants", "crypto", "dgram", "diagnostics_channel", "dns", "domain",
+  "events", "fs", "fs/promises", "http", "http2", "https", "inspector",
+  "module", "net", "os", "path", "path/posix", "path/win32", "perf_hooks",
+  "process", "punycode", "querystring", "readline", "repl", "stream",
+  "stream/consumers", "stream/promises", "stream/web", "string_decoder",
+  "sys", "timers", "timers/promises", "tls", "trace_events", "tty", "url",
+  "util", "util/types", "v8", "vm", "wasi", "worker_threads", "zlib",
+]);
+
+function rewriteNodeImports(src) {
+  // Match both: import "x" and from "x" (side-effect and named imports)
+  return src.replace(/(?:from |import )["']([a-z][a-z0-9_/.-]*)["']/g, (match, spec) => {
+    if (spec.startsWith("node:")) return match;
+    if (NODE_BUILTINS.has(spec)) {
+      return match.replace(`"${spec}"`, `"node:${spec}"`).replace(`'${spec}'`, `'node:${spec}'`);
+    }
+    return match;
+  });
+}
+
+const workerDir = path.join(webRoot, "dist", "sandbox_website_template");
+const workerAssets = path.join(workerDir, "assets");
+const workerFiles = [
+  path.join(workerDir, "index.js"),
+  ...(await exists(workerAssets)
+    ? (await fs.readdir(workerAssets)).map(f => path.join(workerAssets, f)).filter(f => f.endsWith(".js"))
+    : []),
+];
+
+let patchedFiles = 0;
+for (const file of workerFiles) {
+  const original = readFileSync(file, "utf8");
+  const patched = rewriteNodeImports(original);
+  if (patched !== original) {
+    writeFileSync(file, patched);
+    patchedFiles++;
+  }
+}
+console.log(`✓ Rewrote bare Node builtins to node: prefix in ${patchedFiles} worker file(s)`);
+
+// ─── 4. Remove .wrangler/deploy/config.json ──────────────────────────────────
 // The CF Vite plugin creates this to redirect wrangler to the pre-bundled
 // dist/sandbox_website_template/ which has no_bundle:true and bare Node specifiers.
 // Deleting it forces wrangler to use our cleaned wrangler.json and re-bundle properly.
