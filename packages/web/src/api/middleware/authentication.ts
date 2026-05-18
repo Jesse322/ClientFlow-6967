@@ -8,8 +8,15 @@ const getBaseURL = () => {
 export const authMiddleware = createMiddleware(async (c, next) => {
   const env = (c.env || {}) as any;
   if (env && Object.keys(env).length) Object.assign(process.env, env);
-  const auth = createAuth({ ...process.env, ...env } as any, getBaseURL());
-  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+
+  let session = null;
+  try {
+    const auth = createAuth({ ...process.env, ...env } as any, getBaseURL());
+    session = await auth.api.getSession({ headers: c.req.raw.headers });
+  } catch (error) {
+    console.warn("[auth] Session lookup skipped:", error instanceof Error ? error.message : error);
+  }
+
   if (!session) {
     c.set("user", null);
     c.set("session", null);

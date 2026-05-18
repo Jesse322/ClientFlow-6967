@@ -5,8 +5,19 @@ import { createClient } from "@libsql/client";
 import * as schema from "./database/schema";
 
 export const createAuth = (env: { BETTER_AUTH_SECRET?: string; DATABASE_URL?: string; DATABASE_AUTH_TOKEN?: string; [key: string]: any }, baseURL: string) => {
+  const databaseUrl = env.DATABASE_URL || process.env.DATABASE_URL;
+  const secret = env.BETTER_AUTH_SECRET || process.env.BETTER_AUTH_SECRET;
+
+  if (!databaseUrl) {
+    throw new Error("DATABASE_URL is required to initialize auth");
+  }
+
+  if (!secret) {
+    throw new Error("BETTER_AUTH_SECRET is required to initialize auth");
+  }
+
   const libsql = createClient({
-    url: (env.DATABASE_URL || process.env.DATABASE_URL)!,
+    url: databaseUrl,
     authToken: env.DATABASE_AUTH_TOKEN || process.env.DATABASE_AUTH_TOKEN,
   });
   const db = drizzle(libsql, { schema });
@@ -19,7 +30,7 @@ export const createAuth = (env: { BETTER_AUTH_SECRET?: string; DATABASE_URL?: st
       enabled: true,
       requireEmailVerification: false,
     },
-    secret: (env.BETTER_AUTH_SECRET || process.env.BETTER_AUTH_SECRET)!,
+    secret,
     baseURL,
     trustedOrigins: ["*"],
     user: {
@@ -39,9 +50,3 @@ export const createAuth = (env: { BETTER_AUTH_SECRET?: string; DATABASE_URL?: st
     },
   });
 };
-
-// Static export for CLI schema generation
-export const auth = createAuth(
-  { BETTER_AUTH_SECRET: "placeholder" },
-  "http://localhost:5294"
-);
