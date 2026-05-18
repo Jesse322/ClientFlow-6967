@@ -1,5 +1,5 @@
 import fs from "node:fs/promises";
-import { readFileSync, writeFileSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -92,17 +92,18 @@ try {
     main: config.main,
     compatibility_date: config.compatibility_date,
     compatibility_flags: config.compatibility_flags,
+    rules: config.rules,
     assets: config.assets,
     vars: config.vars,
+    no_bundle: config.no_bundle,
     ...(config.triggers?.crons?.length ? { triggers: config.triggers } : {}),
     ...(config.durable_objects?.bindings?.length ? { durable_objects: config.durable_objects } : {}),
     ...(config.kv_namespaces?.length ? { kv_namespaces: config.kv_namespaces } : {}),
     ...(config.r2_buckets?.length ? { r2_buckets: config.r2_buckets } : {}),
     ...(config.d1_databases?.length ? { d1_databases: config.d1_databases } : {}),
     ...(config.queues?.producers?.length || config.queues?.consumers?.length ? { queues: config.queues } : {}),
-    // no_bundle intentionally omitted — wrangler must re-bundle to resolve bare Node
-    // builtins (stream, path, crypto, etc.) via nodejs_compat. no_bundle:true passes
-    // chunks as-is to V8 which can't resolve them → "Load failed".
+    // rules and no_bundle must stay in sync with the CF Vite plugin output so
+    // the worker's imported chunks are included when Runable publishes dist/.
   };
   writeFileSync(wranglerPath, JSON.stringify(clean, null, 2));
   console.log("✓ Cleaned dist/sandbox_website_template/wrangler.json");
@@ -158,13 +159,6 @@ for (const file of workerFiles) {
 }
 console.log(`✓ Rewrote bare Node builtins to node: prefix in ${patchedFiles} worker file(s)`);
 
-// ─── 4. Remove .wrangler/deploy/config.json ──────────────────────────────────
-// The CF Vite plugin creates this to redirect wrangler to the pre-bundled
-// dist/sandbox_website_template/ which has no_bundle:true and bare Node specifiers.
-// Deleting it forces wrangler to use our cleaned wrangler.json and re-bundle properly.
-
-const deployConfig = path.join(webRoot, ".wrangler", "deploy", "config.json");
-try {
-  rmSync(deployConfig);
-  console.log("✓ Removed .wrangler/deploy/config.json");
-} catch (_) { /* may not exist */ }
+// Keep .wrangler/deploy/config.json intact. The Cloudflare Vite plugin and
+// Runable publish flow use it to locate dist/sandbox_website_template/wrangler.json,
+// which we have already cleaned above.
