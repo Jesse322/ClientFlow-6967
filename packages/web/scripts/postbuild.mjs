@@ -92,17 +92,18 @@ try {
     main: config.main,
     compatibility_date: config.compatibility_date,
     compatibility_flags: config.compatibility_flags,
+    rules: config.rules,
     assets: config.assets,
     vars: config.vars,
+    no_bundle: config.no_bundle,
     ...(config.triggers?.crons?.length ? { triggers: config.triggers } : {}),
     ...(config.durable_objects?.bindings?.length ? { durable_objects: config.durable_objects } : {}),
     ...(config.kv_namespaces?.length ? { kv_namespaces: config.kv_namespaces } : {}),
     ...(config.r2_buckets?.length ? { r2_buckets: config.r2_buckets } : {}),
     ...(config.d1_databases?.length ? { d1_databases: config.d1_databases } : {}),
     ...(config.queues?.producers?.length || config.queues?.consumers?.length ? { queues: config.queues } : {}),
-    // no_bundle intentionally omitted — wrangler must re-bundle to resolve bare Node
-    // builtins (stream, path, crypto, etc.) via nodejs_compat. no_bundle:true passes
-    // chunks as-is to V8 which can't resolve them → "Load failed".
+    // rules and no_bundle must stay in sync with the CF Vite plugin output so
+    // the worker's imported chunks are included when Runable publishes dist/.
   };
   writeFileSync(wranglerPath, JSON.stringify(clean, null, 2));
   console.log("✓ Cleaned dist/sandbox_website_template/wrangler.json");
