@@ -30,6 +30,30 @@ function manualChunks(id: string) {
 	return 'vendor-misc';
 }
 
+/**
+ * Force the worker (sandbox_website_template) build to inline all dynamic imports
+ * into a single output file. CF Workers deployed as pre-built chunks cannot resolve
+ * relative dynamic import() calls at runtime → "Load failed".
+ * inlineDynamicImports:true collapses everything into worker-entry.js with no splits.
+ */
+function workerInlineDynamicImportsPlugin(): Plugin {
+	return {
+		name: "worker-inline-dynamic-imports",
+		configEnvironment(name) {
+			if (name !== "sandbox_website_template") return;
+			return {
+				build: {
+					rollupOptions: {
+						output: {
+							inlineDynamicImports: true,
+						},
+					},
+				},
+			};
+		},
+	};
+}
+
 function clientManualChunksPlugin(): Plugin {
 	return {
 		name: "client-manual-chunks",
@@ -76,7 +100,7 @@ function patchRunableWebsiteRuntime(): Plugin[] {
 }
 
 export default defineConfig({
-	plugins: [react(), runableAnalyticsPlugin(), ...patchRunableWebsiteRuntime(), cloudflare(), tailwind(), honoDevPlugin(), clientManualChunksPlugin(), cleanOrphanedChunksPlugin()],
+	plugins: [react(), runableAnalyticsPlugin(), ...patchRunableWebsiteRuntime(), cloudflare(), tailwind(), honoDevPlugin(), workerInlineDynamicImportsPlugin(), clientManualChunksPlugin(), cleanOrphanedChunksPlugin()],
 	resolve: {
 		alias: {
 			"@": path.resolve(__dirname, "./src/web"),
